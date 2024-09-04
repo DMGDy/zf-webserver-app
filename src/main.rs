@@ -11,6 +11,11 @@ struct TestData {
     float_data: f64,
 }
 
+#[derive(Deserialize,Serialize)]
+struct TestResult {
+    pass: bool,
+}
+
 
 // Function to handle the POST request
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
@@ -59,6 +64,6 @@ async fn main() {
 
     println!("Server starting on http://localhost:8080");
     warp::serve(routes)
-        .run(([10,0,0,196], 8080))
+        .run(([192,168,56,1], 8080))
         .await;
 }
