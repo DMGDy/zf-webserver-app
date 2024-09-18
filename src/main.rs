@@ -63,8 +63,8 @@ async fn main() {
         .or(options_route)
         .with(cors);
 
-    println!("Server starting on http://172.20.10.7:8080");
+    println!("Server starting on http://localhost:8080");
     warp::serve(routes)
-        .run(([172,20,10,7], 8080))
+        .run(([127,0,0,1], 8080))
         .await;
 }
