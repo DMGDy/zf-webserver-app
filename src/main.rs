@@ -1,9 +1,12 @@
 use warp::Filter;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::path::Path;
+use std::process::Command;
 use tokio::sync::Mutex;
 
 
+// struct expected from first POST request
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct TestData {
     device: String,
@@ -18,11 +21,20 @@ struct TestResult {
 }
 
 
-// Function to handle the POST request
+// handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
     println!("Received JSON data: {:?}", new_data);
+
+    let script = format!("/home/root/OpenAMP-Example/fw_cortex_m4.sh").to_owned();
+    let script_path = Path::new(&script);
+    let output = Command::new("sh")
+        .arg("-c")
+        .arg(script_path)
+        .output()
+        .expect("Failed to run script!");
+    println!("{:?}",output.stdout);
+
     
-    // Clone new_data before moving it into the async block
     let new_data_clone = new_data.clone();
     
     // Spawn a new task to process the data asynchronously
@@ -31,6 +43,14 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         store.push(new_data_clone);
         println!("Updated data store. Current count: {}", store.len());
     });
+
+    /* TODO: implement on server to comprehend a struct as response
+    let result = TestResult {
+        pass: true
+    };
+
+    //warp::reply::json(&serde_json::json!(result));
+    */
     
     warp::reply::json(&serde_json::json!({"status": 0}))
 }
@@ -47,19 +67,20 @@ async fn main() {
         .allow_methods(vec!["POST", "OPTIONS"]);
 
     // Clone the Arc for the filter
-    let data_store_filter = warp::any().map(move || data_store.clone());
+    let data_store_filter = warp::any()
+        .map(move || data_store.clone());
 
-    let post_route = warp::post()
+    let dev_selecet_route = warp::post()
         .and(warp::body::json())
         .and(data_store_filter)
         .map(handle_post);
-
+    
     // OPTIONS route for CORS preflight requests
     let options_route = warp::options()
         .map(|| warp::reply());
 
     // Combine routes
-    let routes = post_route
+    let routes = dev_selecet_route
         .or(options_route)
         .with(cors);
 
