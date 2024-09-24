@@ -30,6 +30,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     let output = Command::new("sh")
         .arg("-c")
         .arg(script_path)
+        .arg("start")
         .output()
         .expect("Failed to run script!");
     println!("{:?}",output.stdout);
