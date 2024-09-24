@@ -29,13 +29,14 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     let script_path = Path::new(&script);
     let output = Command::new("sh")
         .arg("-c")
+        .arg("cd /home/root/OpenAMP-Example/;")
         .arg(script_path)
         .arg("start")
         .output()
         .expect("Failed to run script!");
-    println!("{:?}",output.stdout);
 
-    
+    println!("{:?}",String::from_utf8(output.stdout));
+
     let new_data_clone = new_data.clone();
     
     // Spawn a new task to process the data asynchronously
