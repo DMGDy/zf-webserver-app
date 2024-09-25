@@ -25,17 +25,19 @@ struct TestResult {
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
     println!("Received JSON data: {:?}", new_data);
 
-    let script = format!("/home/root/OpenAMP-Example/fw_cortex_m4.sh").to_owned();
-    let script_path = Path::new(&script);
+    let script_path = Path::new("/home/root/OpenAMP-Example/");
+    let script = format!("fw_cortex_m4.sh").to_owned();
     let output = Command::new("sh")
         .arg("-c")
-        .arg("cd /home/root/OpenAMP-Example/;")
+        .arg("cd")
         .arg(script_path)
+        .arg(";")
+        .arg(script)
         .arg("start")
         .output()
         .expect("Failed to run script!");
 
-    println!("{:?}",String::from_utf8(output.stdout));
+    println!("{:?}",String::from_utf8(output.stdout).unwrap_or("Failed".to_owned()));
 
     let new_data_clone = new_data.clone();
     
