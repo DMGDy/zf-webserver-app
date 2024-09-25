@@ -55,23 +55,29 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     }
 
     println!("Loading M4 firmware for device {}",new_data.device);
-    let script_path = Path::new("/home/root/OpenAMP-Example/");
+    let script_path = format!("/home/root/M4_Firmware/{}",new_data.device);
     let script = format!("./fw_cortex_m4.sh").to_owned();
 
     let output = Command::new(script)
         .current_dir(script_path)
         .arg("start")
-        .output()
-        .expect("Failed to run script!");
+        .output();
 
-    println!("{}",String::from_utf8_lossy(&output.stdout));
-    println!("Firmware loaded successfully!");
+    match output {
+        Ok(result) => {
+            println!("{}",String::from_utf8_lossy(&result.stdout));
+            println!("Firmware loaded successfully!");
 
-    match ipc_comm() {
-        Ok(()) => (),
-        Err(_) => println!("Error Opening"),
+            match ipc_comm() {
+                Ok(()) => (),
+                Err(_) => println!("Error Opening"),
+            };
+
+        },
+        Err(e) => {
+            println!("Error loading firmware!: {}",e);
+        }
     };
-
 
     let new_data_clone = new_data.clone();
     
