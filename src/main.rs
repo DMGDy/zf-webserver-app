@@ -60,15 +60,18 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
 
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
-    println!("Test Info:\n Device: {}", new_data.device);
+    println!("Test Info:\nDevice: {}", new_data.device);
     match new_data.device.as_str() {
         "BST" => println!("String Potentiometer Enabled: {}",new_data.check),
         _ => println!("Check: {}",new_data.check),
     }
 
-    println!("Loading M4 firmware for device {}",new_data.device);
-    let script_path = format!("/home/root/M4_Firmware/{}-Firmware",new_data.abbrv_device());
+    let path = format!("/home/root/M4_Firmware/{}-Firmware/",new_data.abbrv_device());
+    let script_path = Path::new(&path);
     let script = format!("./fw_cortex_m4.sh").to_owned();
+
+    println!("Loading M4 firmware for device {}",new_data.abbrv_device());
+    println!("at: {}",path);
 
     let output = Command::new(script)
         .current_dir(script_path)
