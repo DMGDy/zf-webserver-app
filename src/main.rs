@@ -27,17 +27,13 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
     let script_path = Path::new("/home/root/OpenAMP-Example/");
     let script = format!("./fw_cortex_m4.sh").to_owned();
-    let output = Command::new("sh")
-        .arg("-c")
-        .arg("cd")
-        .arg(script_path)
-        .arg(";")
-        .arg(script)
+    let output = Command::new(script)
+        .current_dir(script_path)
         .arg("start")
         .output()
         .expect("Failed to run script!");
 
-    println!("{:?}",String::from_utf8(output.stdout).unwrap_or("Failed".to_owned()));
+    println!("{:?}",String::from_utf8_lossy(&output.stdout));
 
     let new_data_clone = new_data.clone();
     
