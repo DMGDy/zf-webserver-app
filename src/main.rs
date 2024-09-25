@@ -26,7 +26,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     println!("Received JSON data: {:?}", new_data);
 
     let script_path = Path::new("/home/root/OpenAMP-Example/");
-    let script = format!("fw_cortex_m4.sh").to_owned();
+    let script = format!("./fw_cortex_m4.sh").to_owned();
     let output = Command::new("sh")
         .arg("-c")
         .arg("cd")
