@@ -23,6 +23,18 @@ struct TestResult {
     pass: bool,
 }
 
+impl TestData {
+    pub fn abbrv_device(&self) -> &str {
+        match self.device.as_str() {
+            "Break Signal Transmitter" => "BST",
+            "Continuous Wear Sensor" => "CWS",
+            "Pressure Sensor" => "PrS",
+            "Electronic Stability Control Module" => "ESCM",
+            _ => "ERR",
+        }
+    }
+}
+
 fn ipc_comm() -> Result<(), Box<dyn Error>>{
     let mut msgbuffer = String::new();
 
@@ -55,7 +67,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     }
 
     println!("Loading M4 firmware for device {}",new_data.device);
-    let script_path = format!("/home/root/M4_Firmware/{}-Firmware",new_data.device);
+    let script_path = format!("/home/root/M4_Firmware/{}-Firmware",new_data.abbrv_device());
     let script = format!("./fw_cortex_m4.sh").to_owned();
 
     let output = Command::new(script)
