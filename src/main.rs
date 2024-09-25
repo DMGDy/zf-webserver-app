@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
+use std::fs::File;
+use std::error::Error;
+use std::io::{BufReader,BufWriter,Write,Read};
 use tokio::sync::Mutex;
 
 
@@ -20,20 +23,55 @@ struct TestResult {
     pass: bool,
 }
 
+fn ipc_comm() -> Result<(), Box<dyn Error>>{
+    let mut msgbuffer = String::new();
+
+    let dev_rpmsg = File::open("/dev/ttyRPMSG0")?;
+    let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
+    let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
+
+    match rpmsg_writer.write(b"test") {
+        Ok(_) => {
+            match rpmsg_reader.read_to_string(&mut msgbuffer) {
+                Ok(_) => println!("{}",msgbuffer),
+                Err(_) => println!("Error reading!"),
+            };
+        },
+        Err(_) => {
+            println!("Error writing!")
+        },
+    };
+
+    Ok(())
+}
+
 
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
-    println!("Received JSON data: {:?}", new_data);
+    println!("Test Info:\n Device: {}", new_data.device);
+    match new_data.device.as_str() {
+        "BST" => println!("String Potentiometer Enabled: {}",new_data.check),
+        _ => println!("Check: {}",new_data.check),
+    }
 
+    println!("Loading M4 firmware for device {}",new_data.device);
     let script_path = Path::new("/home/root/OpenAMP-Example/");
     let script = format!("./fw_cortex_m4.sh").to_owned();
+
     let output = Command::new(script)
         .current_dir(script_path)
         .arg("start")
         .output()
         .expect("Failed to run script!");
 
-    println!("{:?}",String::from_utf8_lossy(&output.stdout));
+    println!("{}",String::from_utf8_lossy(&output.stdout));
+    println!("Firmware loaded successfully!");
+
+    match ipc_comm() {
+        Ok(()) => (),
+        Err(_) => println!("Error Opening"),
+    };
+
 
     let new_data_clone = new_data.clone();
     
@@ -84,7 +122,9 @@ async fn main() {
         .or(options_route)
         .with(cors);
 
-    println!("Server starting on http://localhost:8080");
+    println!("------Rust Server for Web Assembly Application-----");
+    println!("---------------------------------------------------");
+    println!("Server Listening http://localhost:8080\n");
     warp::serve(routes)
         .run(([172,20,10,7], 8080))
         .await;
