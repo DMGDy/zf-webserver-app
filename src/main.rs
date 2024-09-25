@@ -55,7 +55,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     }
 
     println!("Loading M4 firmware for device {}",new_data.device);
-    let script_path = format!("/home/root/M4_Firmware/{}",new_data.device);
+    let script_path = format!("/home/root/M4_Firmware/{}-Firmware",new_data.device);
     let script = format!("./fw_cortex_m4.sh").to_owned();
 
     let output = Command::new(script)
