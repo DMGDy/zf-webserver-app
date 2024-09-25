@@ -6,6 +6,8 @@ use std::process::Command;
 use std::fs::File;
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
+use std::os::unix::fs::OpenOptionsExt;
+use libc;
 use tokio::sync::Mutex;
 
 
@@ -41,6 +43,7 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
     let dev_rpmsg = File::options()
         .read(true)
         .write(true)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open("/dev/ttyRPMSG0")?;
     let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
