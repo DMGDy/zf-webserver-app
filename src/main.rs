@@ -26,7 +26,7 @@ struct TestResult {
 impl TestData {
     pub fn abbrv_device(&self) -> &str {
         match self.device.as_str() {
-            "Break Signal Transmitter" => "BST",
+            "Brake Signal Transmitter" => "BST",
             "Continuous Wear Sensor" => "CWS",
             "Pressure Sensor" => "PrS",
             "Electronic Stability Control Module" => "ESCM",
