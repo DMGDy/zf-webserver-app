@@ -38,7 +38,10 @@ impl TestData {
 fn ipc_comm() -> Result<(), Box<dyn Error>>{
     let mut msgbuffer = String::new();
 
-    let dev_rpmsg = File::open("/dev/ttyRPMSG0")?;
+    let dev_rpmsg = File::options()
+        .read(true)
+        .write(true)
+        .open("/dev/ttyRPMSG0")?;
     let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
 
@@ -85,7 +88,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
             match ipc_comm() {
                 Ok(()) => (),
-                Err(_) => println!("Error Opening"),
+                Err(e) => println!("Error Opening:{}",e),
             };
 
         },
