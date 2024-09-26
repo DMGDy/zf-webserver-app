@@ -55,6 +55,7 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
 
     match rpmsg_writer.write(b"test") {
         Ok(_) => {
+            thread::sleep(time::Duration::from_millis(10));
             loop {
                 match rpmsg_reader.read(&mut msgbuffer) {
                     Ok(_) => {
@@ -67,8 +68,7 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
                         }
                     }
                     Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(
-                            time::Duration::from_millis(10));
+                        thread::sleep(time::Duration::from_millis(10));
                     }
                     Err(e) => {
                         println!("Error reading file!: {}",e);
