@@ -61,7 +61,6 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     loop {
         match reader.read_to_string(&mut msgbuff) {
             Ok(_) => {
-                println!("Device read successfully!: {}",msgbuff);
                 break
             },
 
@@ -89,10 +88,10 @@ fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
 
     match rpmsg_writer.write(msg.as_bytes()) {
         Ok(_) => {
-            println!("Succesfully written to device file {}!",msg)
+            println!("Succesfully written to device file < {} >!",msg)
         },
         Err(e)=> {
-            println!("Error Writing to device file {}!",e)
+            println!("Error Writing to device file: {}!",e)
         },
     }
     Ok(())
@@ -120,10 +119,10 @@ fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
 
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
-    println!("Test Info:\nDevice: {}", new_data.device);
+    println!("Test Info:\n\tDevice: {}", new_data.device);
     match new_data.device.as_str() {
-        "BST" => println!("String Potentiometer Enabled: {}",new_data.check),
-        _ => println!("Check: {}",new_data.check),
+        "BST" => println!("\tString Potentiometer Enabled: {}",new_data.check),
+        _ => println!("\tCheck: {}",new_data.check),
     }
 
     let output = load_firmware(new_data.abbrv_device());
@@ -146,16 +145,16 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             println!("Message < {} > written successfully!", msg);
         },
         Err(e) => {
-            println!("Failed to open {} device file!: {}",VIRT_DEVICE,e)
+            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e)
         },
     }
 
      match rpmsg_read() {
         Ok(response) => {
-            println!("Received response from device file: {}",response);
+            println!("Received response from device file: < {} >",response);
         },
         Err(e) => {
-            println!("Failed to open {} device file!: {}", VIRT_DEVICE,e)
+            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e)
         }
     }
 
