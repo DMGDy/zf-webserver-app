@@ -58,15 +58,21 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     println!("Attempting to read from device...");
 
-    match reader.read_to_string(&mut msgbuff) {
-        Ok(_) => {
-            println!("Device read successfully!: {}",msgbuff)
-        },
+    loop {
+        match reader.read_to_string(&mut msgbuff) {
+            Ok(_) => {
+                println!("Device read successfully!: {}",msgbuff);
+                break
+            },
 
-        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-            thread::sleep(time::Duration::from_millis(10))
-        },
-        Err(e) => println!("Error reading device file!: {}",e),
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                thread::sleep(time::Duration::from_millis(10))
+            },
+            Err(e) => {
+                println!("Error reading device file!: {}",e);
+                std::process::exit(-1)
+            }
+        }
     }
     Ok(msgbuff)
 }
