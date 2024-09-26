@@ -3,11 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
+use std::fs;
 use std::fs::{File,OpenOptions};
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
 use std::str;
+use std::{thread,time};
 use libc;
 use tokio::sync::Mutex;
 
@@ -52,6 +54,7 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
 
     match rpmsg_writer.write(b"test") {
         Ok(_) => {
+            let _ = time::Duration::from_millis(10);
             match rpmsg_reader.read_to_end(&mut msgbuffer) {
                 Ok(_) => {
                     match str::from_utf8(&msgbuffer) {
@@ -90,6 +93,15 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         .current_dir(script_path)
         .arg("start")
         .output();
+
+
+    /* Check if device exists, otherwise keep checking */
+    loop {
+        match fs::metadata("/dev/ttyRPMSG0") {
+            Ok(_) => break,
+            Err(_) => {},
+        }
+    }
 
     match output {
         Ok(result) => {
