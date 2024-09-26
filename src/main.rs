@@ -9,7 +9,7 @@ use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
 use std::str;
-use std::{thread,time};
+use std::{thread, time};
 use libc;
 use tokio::sync::Mutex;
 
@@ -49,26 +49,29 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
         .write(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open("/dev/ttyRPMSG0")?;
+
     let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
 
     match rpmsg_writer.write(b"test") {
         Ok(_) => {
-            let _ = time::Duration::from_millis(10);
             loop {
-                match rpmsg_reader.read_to_end(&mut msgbuffer) {
+                match rpmsg_reader.read(&mut msgbuffer) {
                     Ok(_) => {
                         match str::from_utf8(&msgbuffer) {
                             Ok(s) => {
-                                println!("{}",s);
-                                break
-                            }
+                                println!("{}",s)
+                            },
                             Err(e) => println!("Error reading from buffer!: {}",e),
                         }
                     }
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        thread::sleep(
+                            time::Duration::from_millis(10));
+                    }
                     Err(e) => println!("Error reading file!: {}",e),
                 }
-            };
+            }
         },
         Err(e) => {
             println!("Error writing!: {}",e)
