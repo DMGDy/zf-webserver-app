@@ -7,8 +7,10 @@ use std::fs::{File,OpenOptions};
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
+use std::str;
 use libc;
 use tokio::sync::Mutex;
+
 
 
 // struct expected from first POST request
@@ -38,7 +40,7 @@ impl TestData {
 }
 
 fn ipc_comm() -> Result<(), Box<dyn Error>>{
-    let mut msgbuffer = String::new();
+    let mut msgbuffer = Vec::new();
 
     let dev_rpmsg = OpenOptions::new()
         .read(true)
@@ -50,13 +52,18 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
 
     match rpmsg_writer.write(b"test") {
         Ok(_) => {
-            match rpmsg_reader.read_to_string(&mut msgbuffer) {
-                Ok(_) => println!("{}",msgbuffer),
-                Err(_) => println!("Error reading!"),
+            match rpmsg_reader.read_to_end(&mut msgbuffer) {
+                Ok(_) => {
+                    match str::from_utf8(&msgbuffer) {
+                        Ok(s) => println!("{}",s),
+                        Err(e) => println!("Error Reading!: {}",e),
+                    }
+                }
+                Err(e) => println!("Error reading!{}",e),
             };
         },
-        Err(_) => {
-            println!("Error writing!")
+        Err(e) => {
+            println!("Error writing!: {}",e)
         },
     };
 
@@ -122,16 +129,14 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
 #[tokio::main]
 async fn main() {
-    // Create a shared data store
     let data_store = Arc::new(Mutex::new(Vec::new()));
 
-    // CORS configuration
+    // configure CORs
     let cors = warp::cors()
         .allow_any_origin()
         .allow_headers(vec!["Content-Type"])
         .allow_methods(vec!["POST", "OPTIONS"]);
 
-    // Clone the Arc for the filter
     let data_store_filter = warp::any()
         .map(move || data_store.clone());
 
@@ -140,11 +145,11 @@ async fn main() {
         .and(data_store_filter)
         .map(handle_post);
     
-    // OPTIONS route for CORS preflight requests
+    
     let options_route = warp::options()
         .map(|| warp::reply());
 
-    // Combine routes
+    // routes
     let routes = dev_selecet_route
         .or(options_route)
         .with(cors);
