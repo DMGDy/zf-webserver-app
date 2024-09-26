@@ -60,7 +60,8 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
                     Ok(_) => {
                         match str::from_utf8(&msgbuffer) {
                             Ok(s) => {
-                                println!("{}",s)
+                                println!("{}",s);
+                                break
                             },
                             Err(e) => println!("Error reading from buffer!: {}",e),
                         }
@@ -69,7 +70,10 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
                         thread::sleep(
                             time::Duration::from_millis(10));
                     }
-                    Err(e) => println!("Error reading file!: {}",e),
+                    Err(e) => {
+                        println!("Error reading file!: {}",e);
+                        break;
+                    }
                 }
             }
         },
@@ -95,7 +99,6 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     let script = format!("./fw_cortex_m4.sh").to_owned();
 
     println!("Loading M4 firmware for device {}",new_data.abbrv_device());
-    println!("at: {}",path);
 
     let output = Command::new(script)
         .current_dir(script_path)
@@ -113,7 +116,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
     match output {
         Ok(result) => {
-            println!("{}",String::from_utf8_lossy(&result.stdout));
+            print!("{}",String::from_utf8_lossy(&result.stdout));
             println!("Firmware loaded successfully!");
 
             match ipc_comm() {
