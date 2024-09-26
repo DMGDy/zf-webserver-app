@@ -16,7 +16,7 @@ use libc;
 use tokio::sync::Mutex;
 
 
-const VIRT_DEVICE: &str = "/dev/RPMSG0";
+const VIRT_DEVICE: &str = "/dev/ttyRPMSG0";
 
 // struct expected from first POST request
 #[derive(Deserialize, Serialize, Debug, Clone)]
