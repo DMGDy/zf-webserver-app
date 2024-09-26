@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
+use std::process::Output;
 use std::fs;
+use std::process::exit;
 use std::fs::{File,OpenOptions};
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
@@ -14,6 +16,7 @@ use libc;
 use tokio::sync::Mutex;
 
 
+const VIRT_DEVICE: &str = "/dev/RPMSG0";
 
 // struct expected from first POST request
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -29,6 +32,7 @@ struct TestResult {
     pass: bool,
 }
 
+
 impl TestData {
     pub fn abbrv_device(&self) -> &str {
         match self.device.as_str() {
@@ -41,50 +45,72 @@ impl TestData {
     }
 }
 
-fn ipc_comm() -> Result<(), Box<dyn Error>>{
-    let mut msgbuffer = Vec::new();
+fn rpmsg_read() -> Result<String, Box<dyn Error>> {
+    let mut msgbuff = String::new();
 
     let dev_rpmsg = OpenOptions::new()
         .read(true)
+        .write(false)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .open(VIRT_DEVICE)?;
+
+    let mut reader = BufReader::new(&dev_rpmsg);
+
+    println!("Attempting to read from device...");
+
+    match reader.read_to_string(&mut msgbuff) {
+        Ok(_) => {
+            println!("Device read successfully!: {}",msgbuff)
+        },
+
+        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+            thread::sleep(time::Duration::from_millis(10))
+        },
+        Err(e) => println!("Error reading device file!: {}",e),
+    }
+    Ok(msgbuff)
+}
+
+fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
+
+    let dev_rpmsg = OpenOptions::new()
+        .read(false)
         .write(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
-        .open("/dev/ttyRPMSG0")?;
+        .open(VIRT_DEVICE)?;
 
-    let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
 
-    match rpmsg_writer.write(b"test") {
+    match rpmsg_writer.write(msg.as_bytes()) {
         Ok(_) => {
-            thread::sleep(time::Duration::from_millis(10));
-            loop {
-                match rpmsg_reader.read(&mut msgbuffer) {
-                    Ok(_) => {
-                        match str::from_utf8(&msgbuffer) {
-                            Ok(s) => {
-                                println!("{}",s);
-                                break
-                            },
-                            Err(e) => println!("Error reading from buffer!: {}",e),
-                        }
-                    }
-                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                        thread::sleep(time::Duration::from_millis(10));
-                    }
-                    Err(e) => {
-                        println!("Error reading file!: {}",e);
-                        break;
-                    }
-                }
-            }
+            println!("Succesfully written to device file {}!",msg)
         },
-        Err(e) => {
-            println!("Error writing!: {}",e)
+        Err(e)=> {
+            println!("Error Writing to device file {}!",e)
         },
-    };
-
+    }
     Ok(())
 }
 
+fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
+    let path = format!("/home/root/M4_Firmware/{}-Firmware/",dev);
+    let script_path = Path::new(&path);
+    let script = format!("./fw_cortex_m4.sh").to_owned();
+
+    let output = Command::new(script)
+        .current_dir(script_path)
+        .arg("start")
+        .output()?;
+
+    loop {
+        match fs::metadata(VIRT_DEVICE) {
+            Ok(_) => break,
+            Err(_) => {},
+        }
+    }
+
+    Ok(output)
+}
 
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
@@ -94,41 +120,38 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         _ => println!("Check: {}",new_data.check),
     }
 
-    let path = format!("/home/root/M4_Firmware/{}-Firmware/",new_data.abbrv_device());
-    let script_path = Path::new(&path);
-    let script = format!("./fw_cortex_m4.sh").to_owned();
-
-    println!("Loading M4 firmware for device {}",new_data.abbrv_device());
-
-    let output = Command::new(script)
-        .current_dir(script_path)
-        .arg("start")
-        .output();
-
-
-    /* Check if device exists, otherwise keep checking */
-    loop {
-        match fs::metadata("/dev/ttyRPMSG0") {
-            Ok(_) => break,
-            Err(_) => {},
-        }
-    }
+    let output = load_firmware(new_data.abbrv_device());
 
     match output {
         Ok(result) => {
             print!("{}",String::from_utf8_lossy(&result.stdout));
             println!("Firmware loaded successfully!");
-
-            match ipc_comm() {
-                Ok(()) => (),
-                Err(e) => println!("Error Opening:{}",e),
-            };
-
         },
         Err(e) => {
             println!("Error loading firmware!: {}",e);
+            println!("Server closing...");
+            std::process::exit(-1)
         }
     };
+
+    let msg = "test";
+    match rpmsg_write(msg) {
+        Ok(_) => {
+            println!("Message < {} > written successfully!", msg);
+        },
+        Err(e) => {
+            println!("Failed to open {} device file!: {}",VIRT_DEVICE,e)
+        },
+    }
+
+     match rpmsg_read() {
+        Ok(response) => {
+            println!("Received response from device file: {}",response);
+        },
+        Err(e) => {
+            println!("Failed to open {} device file!: {}", VIRT_DEVICE,e)
+        }
+    }
 
     let new_data_clone = new_data.clone();
     
