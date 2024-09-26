@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::path::Path;
 use std::process::Command;
-use std::fs::File;
+use std::fs::{File,OpenOptions};
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
@@ -40,7 +40,7 @@ impl TestData {
 fn ipc_comm() -> Result<(), Box<dyn Error>>{
     let mut msgbuffer = String::new();
 
-    let dev_rpmsg = File::options()
+    let dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
