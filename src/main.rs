@@ -47,21 +47,27 @@ fn ipc_comm() -> Result<(), Box<dyn Error>>{
     let dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(true)
-        .custom_flags(libc::O_NOCTTY)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open("/dev/ttyRPMSG0")?;
     let mut rpmsg_reader = BufReader::new(&dev_rpmsg);
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
 
     match rpmsg_writer.write(b"test") {
         Ok(_) => {
-            match rpmsg_reader.read_to_end(&mut msgbuffer) {
-                Ok(_) => {
-                    match str::from_utf8(&msgbuffer) {
-                        Ok(s) => println!("{}",s),
-                        Err(e) => println!("Error reading from buffer!: {}",e),
+            let _ = time::Duration::from_millis(10);
+            loop {
+                match rpmsg_reader.read_to_end(&mut msgbuffer) {
+                    Ok(_) => {
+                        match str::from_utf8(&msgbuffer) {
+                            Ok(s) => {
+                                println!("{}",s);
+                                break
+                            }
+                            Err(e) => println!("Error reading from buffer!: {}",e),
+                        }
                     }
+                    Err(e) => println!("Error reading file!: {}",e),
                 }
-                Err(e) => println!("Error reading file!: {}",e),
             };
         },
         Err(e) => {
