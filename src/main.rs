@@ -91,7 +91,7 @@ fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
     let dev_rpmsg = OpenOptions::new()
         .read(false)
         .write(true)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        //.custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
     let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
@@ -252,7 +252,7 @@ async fn main() {
 
     println!("------Rust Server for Web Assembly Application-----");
     println!("---------------------------------------------------");
-    println!("Server Listening http://localhost:8080\n");
+    println!("Server Listening http://172.20.10.7:8080\n");
     warp::serve(routes)
         .run(([172,20,10,7], 8080))
         .await;
