@@ -127,8 +127,15 @@ fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
     println!("Test Info:\n\tDevice: {}", new_data.device);
+    let mut msg_check : &str = "no";
     match new_data.device.as_str() {
-        "BST" => println!("\tString Potentiometer Enabled: {}",new_data.check),
+        "BST" => {
+            println!("\tString Potentiometer Enabled: {}",new_data.check);
+            match new_data.check {
+                true => msg_check = "yes",
+                false => msg_check = "no",
+            }
+        },
         _ => println!("\tCheck: {}",new_data.check),
     }
 
@@ -146,7 +153,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         }
     };
 
-    let msg = "test";
+    let msg = "hello";
     match rpmsg_write(msg) {
         Ok(_) => {
             println!("Message < {} > written successfully!", msg);
@@ -166,6 +173,27 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             std::process::exit(-1)
         }
     }
+    match rpmsg_write(msg_check) {
+        Ok(_) => {
+            println!("Message < {} > written successfully!", msg);
+        },
+        Err(e) => {
+            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
+            std::process::exit(-1)
+        },
+    }
+
+     match rpmsg_read() {
+        Ok(response) => {
+            println!("Received response from device file:\n{}",response);
+        },
+        Err(e) => {
+            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e);
+            std::process::exit(-1)
+        }
+    }
+
+
 
     let new_data_clone = new_data.clone();
     
