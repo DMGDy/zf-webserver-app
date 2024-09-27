@@ -5,13 +5,12 @@ use std::path::Path;
 use std::process::Command;
 use std::process::Output;
 use std::fs;
-use std::process::exit;
-use std::fs::{File,OpenOptions};
+use std::fs::OpenOptions;
 use std::error::Error;
 use std::io::{BufReader,BufWriter,Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
 use std::str;
-use std::{thread, time};
+use std::{thread, time::{Instant,Duration}};
 use libc;
 use tokio::sync::Mutex;
 
@@ -56,17 +55,21 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     let mut reader = BufReader::new(&dev_rpmsg);
 
+    let start_time = Instant::now();
+    let timeout = Duration::from_secs(1);
+    let delta = Duration::from_millis(10);
+
 
     println!("Attempting to read from device...");
-    loop {
+    while  start_time.elapsed() < timeout{
         match reader.read_to_end(&mut response_buff) {
-            Ok(_) => { 
-                if response_buff.is_empty() {}
-                else { break }
-            },
+            Ok(0) => { },
+            Ok(_) => { break },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 /* ignore this error maybe if it gets here */
-                if response_buff.is_empty() {}
+                if response_buff.is_empty() {
+                    continue;
+                }
                 else { break }
             },
             Err(e) => {
@@ -74,6 +77,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
                 return Err(Box::new(e));
             }
         }
+        thread::sleep(delta);
     }
 
     Ok(String::from_utf8(response_buff)?)
