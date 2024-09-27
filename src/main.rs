@@ -58,7 +58,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
-    thread::sleep(time::Duration::from_millis(10));
+    thread::sleep(time::Duration::from_millis(300));
     match reader.read_to_string(&mut response_buff) {
         Ok(_) => { 
         },
@@ -87,13 +87,13 @@ fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
 
     match rpmsg_writer.write(msg.as_bytes()) {
         Ok(_) => {
-            println!("Succesfully written to device file < {} >!",msg)
+            return Ok(())
         },
         Err(e)=> {
-            println!("Error Writing to device file: {}!",e)
+            println!("Error Writing to device file: {}!",e);
+            return Err(Box::new(e))
         },
     }
-    Ok(())
 }
 
 fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
