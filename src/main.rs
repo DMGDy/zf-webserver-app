@@ -57,19 +57,21 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     let start_time = Instant::now();
     let timeout = Duration::from_secs(1);
-    let delta = Duration::from_millis(10);
+    let delta = Duration::from_millis(5);
 
 
     println!("Attempting to read from device...");
-    thread::sleep(Duration::from_millis(300));
     while  start_time.elapsed() < timeout{
         match reader.read_to_end(&mut response_buff) {
-            Ok(0) => { },
+            Ok(0) => { 
+                if response_buff.is_empty(){
+                }
+                else { break }
+            },
             Ok(_) => { break },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 /* ignore this error maybe if it gets here */
                 if response_buff.is_empty() {
-                    continue;
                 }
                 else { break }
             },
