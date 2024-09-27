@@ -46,7 +46,7 @@ impl TestData {
 }
 
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
-    let mut response_buff: Vec<u8> = Vec::with_capacity(7);
+    let mut response_buff = String::new();
 
     let dev_rpmsg = OpenOptions::new()
         .read(true)
@@ -58,8 +58,8 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
-    thread::sleep(time::Duration::from_millis(1));
-    match reader.read_exact(&mut response_buff) {
+    thread::sleep(time::Duration::from_millis(10));
+    match reader.read_to_string(&mut response_buff) {
         Ok(_) => { 
         },
         Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -72,7 +72,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
         }
     }
 
-    Ok(std::str::from_utf8(&response_buff)?.to_string())
+    Ok(response_buff)
 }
 
 fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
