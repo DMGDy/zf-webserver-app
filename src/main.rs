@@ -46,7 +46,7 @@ impl TestData {
 }
 
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
-    let mut msgbuff = String::new();
+    let mut response_buff: Vec<u8> = Vec::with_capacity(7);
 
     let dev_rpmsg = OpenOptions::new()
         .read(true)
@@ -56,21 +56,23 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     let mut reader = BufReader::new(&dev_rpmsg);
 
-    println!("Attempting to read from device...");
 
-    loop {
-        match reader.read_to_string(&mut msgbuff) {
-            Ok(_) => { break },
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                println!("Error but message is: < {} >",msgbuff)
-            },
-            Err(e) => {
-                println!("Error reading device file!: {}",e);
-                std::process::exit(-1)
-            }
+    println!("Attempting to read from device...");
+    thread::sleep(time::Duration::from_millis(1));
+    match reader.read_exact(&mut response_buff) {
+        Ok(_) => { 
+        },
+        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+            /* ignore this error maybe if it gets here */
+            println!("Received Error\"{}\" but proceeding anyway...",e)
+        },
+        Err(e) => {
+            println!("Error reading device file!: {}",e);
+            return Err(Box::new(e));
         }
     }
-    Ok(msgbuff)
+
+    Ok(std::str::from_utf8(&response_buff)?.to_string())
 }
 
 fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
