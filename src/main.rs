@@ -117,7 +117,7 @@ fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
     loop {
         match fs::metadata(VIRT_DEVICE) {
             Ok(_) => break,
-            Err(_) => {thread::sleep(time::Duration::from_millis(1))},
+            Err(_) => {thread::sleep(Duration::from_millis(1))},
         }
     }
 
