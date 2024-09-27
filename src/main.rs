@@ -7,7 +7,7 @@ use std::process::Output;
 use std::fs;
 use std::fs::OpenOptions;
 use std::error::Error;
-use std::io::{BufReader,BufWriter,Write,Read};
+use std::io::{Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
 use std::str;
 use std::{thread, time::{Instant,Duration}};
@@ -47,13 +47,11 @@ impl TestData {
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let mut response_buff :Vec<u8> = Vec::new();
 
-    let dev_rpmsg = OpenOptions::new()
+    let mut dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(false)
-        //.custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
-
-    let mut reader = BufReader::new(&dev_rpmsg);
 
     let start_time = Instant::now();
     let timeout = Duration::from_secs(1);
@@ -62,7 +60,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     println!("Attempting to read from device...");
     while  start_time.elapsed() < timeout{
-        match reader.read_to_end(&mut response_buff) {
+        match dev_rpmsg.read_to_end(&mut response_buff) {
             Ok(0) => { 
                 if response_buff.is_empty(){
                 }
@@ -88,15 +86,13 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
 
-    let dev_rpmsg = OpenOptions::new()
+    let mut dev_rpmsg = OpenOptions::new()
         .read(false)
         .write(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
-    let mut rpmsg_writer = BufWriter::new(&dev_rpmsg);
-
-    match rpmsg_writer.write(msg.as_bytes()) {
+    match dev_rpmsg.write(msg.as_bytes()) {
         Ok(_) => {
             return Ok(())
         },
