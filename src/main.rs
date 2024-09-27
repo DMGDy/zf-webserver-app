@@ -46,7 +46,7 @@ impl TestData {
 }
 
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
-    let mut response_buff = String::new();
+    let mut response_buff :Vec<u8> = Vec::new();
 
     let dev_rpmsg = OpenOptions::new()
         .read(true)
@@ -58,9 +58,8 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
-    thread::sleep(time::Duration::from_millis(150));
     loop {
-        match reader.read_to_string(&mut response_buff) {
+        match reader.read_to_end(&mut response_buff) {
             Ok(_) => { 
                 if response_buff.is_empty() {}
                 else { break }
@@ -77,7 +76,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
         }
     }
 
-    Ok(response_buff)
+    Ok(String::from_utf8(response_buff)?)
 }
 
 fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
