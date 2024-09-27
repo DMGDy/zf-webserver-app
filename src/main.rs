@@ -64,9 +64,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
                 break
             },
 
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                thread::sleep(time::Duration::from_millis(1))
-            },
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {},
             Err(e) => {
                 println!("Error reading device file!: {}",e);
                 std::process::exit(-1)
