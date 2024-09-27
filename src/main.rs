@@ -58,17 +58,21 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
-    thread::sleep(time::Duration::from_millis(300));
-    match reader.read_to_string(&mut response_buff) {
-        Ok(_) => { 
-        },
-        Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-            /* ignore this error maybe if it gets here */
-            println!("Received Error\"{}\" but proceeding anyway...",e)
-        },
-        Err(e) => {
-            println!("Error reading device file!: {}",e);
-            return Err(Box::new(e));
+    loop{
+        match reader.read_to_string(&mut response_buff) {
+            Ok(_) => { 
+                if response_buff.is_empty() {}
+                else { break }
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                /* ignore this error maybe if it gets here */
+                if response_buff.is_empty() {}
+                else { break }
+            },
+            Err(e) => {
+                println!("Error reading device file!: {}",e);
+                return Err(Box::new(e));
+            }
         }
     }
 
@@ -151,7 +155,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
      match rpmsg_read() {
         Ok(response) => {
-            println!("Received response from device file: < {} >",response);
+            println!("Received response from device file:\n  {}",response);
         },
         Err(e) => {
             println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e);
