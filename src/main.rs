@@ -51,7 +51,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(false)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .custom_flags(libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
     let mut reader = BufReader::new(&dev_rpmsg);
@@ -65,7 +65,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
             },
 
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                thread::sleep(time::Duration::from_millis(10))
+                thread::sleep(time::Duration::from_millis(1))
             },
             Err(e) => {
                 println!("Error reading device file!: {}",e);
@@ -110,7 +110,7 @@ fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
     loop {
         match fs::metadata(VIRT_DEVICE) {
             Ok(_) => break,
-            Err(_) => {},
+            Err(_) => {thread::sleep(time::Duration::from_millis(1))},
         }
     }
 
@@ -145,7 +145,8 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             println!("Message < {} > written successfully!", msg);
         },
         Err(e) => {
-            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e)
+            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
+            std::process::exit(-1)
         },
     }
 
@@ -154,7 +155,8 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             println!("Received response from device file: < {} >",response);
         },
         Err(e) => {
-            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e)
+            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e);
+            std::process::exit(-1)
         }
     }
 
