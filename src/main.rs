@@ -61,6 +61,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
+    thread::sleep(Duration::from_millis(300));
     while  start_time.elapsed() < timeout{
         match reader.read_to_end(&mut response_buff) {
             Ok(0) => { },
@@ -139,6 +140,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         _ => println!("\tCheck: {}",new_data.check),
     }
 
+    println!("---------------------------------------------------");
     let output = load_firmware(new_data.abbrv_device());
 
     match output {
@@ -153,6 +155,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         }
     };
 
+    println!("---------------------------------------------------");
     let msg = "hello";
     match rpmsg_write(msg) {
         Ok(_) => {
@@ -164,6 +167,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         },
     }
 
+
      match rpmsg_read() {
         Ok(response) => {
             println!("Received response from device file:\n{}",response);
@@ -173,9 +177,10 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             std::process::exit(-1)
         }
     }
+    println!("---------------------------------------------------");
     match rpmsg_write(msg_check) {
         Ok(_) => {
-            println!("Message < {} > written successfully!", msg);
+            println!("Message < {} > written successfully!", msg_check);
         },
         Err(e) => {
             println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
@@ -192,6 +197,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             std::process::exit(-1)
         }
     }
+    println!("---------------------------------------------------");
 
 
 
