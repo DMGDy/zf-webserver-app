@@ -51,7 +51,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(false)
-        .custom_flags(libc::O_NOCTTY)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
     let mut reader = BufReader::new(&dev_rpmsg);
@@ -60,11 +60,10 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     loop {
         match reader.read_to_string(&mut msgbuff) {
-            Ok(_) => {
-                break
+            Ok(_) => { break },
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                println!("Error but message is: < {} >",msgbuff)
             },
-
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {},
             Err(e) => {
                 println!("Error reading device file!: {}",e);
                 std::process::exit(-1)
