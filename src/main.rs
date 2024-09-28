@@ -17,6 +17,8 @@ use tokio::sync::Mutex;
 
 const VIRT_DEVICE: &str = "/dev/ttyRPMSG0";
 
+static mut FIRMWARE_LOADED: bool = false;
+
 // struct expected from first POST request
 #[derive(Deserialize, Serialize, Debug, Clone)]
 struct TestData {
@@ -29,6 +31,11 @@ struct TestData {
 #[derive(Deserialize,Serialize)]
 struct TestResult {
     pass: bool,
+}
+
+enum FimwareOption {
+    START,
+    STOP,
 }
 
 
@@ -44,6 +51,15 @@ impl TestData {
     }
 }
 
+impl FimwareOption {
+    fn arg(&self) -> &str {
+        match self {
+            Self::START => "start",
+            Self::STOP => "stop",
+        }
+    }
+}
+
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let mut response_buff :Vec<u8> = Vec::new();
 
@@ -53,12 +69,12 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
-    let start_time = Instant::now();
     let timeout = Duration::from_secs(1);
-    let delta = Duration::from_millis(5);
+    let delta = Duration::from_millis(1);
 
 
     println!("Attempting to read from device...");
+    let start_time = Instant::now();
     while  start_time.elapsed() < timeout{
         match dev_rpmsg.read_to_end(&mut response_buff) {
             Ok(0) => { 
@@ -78,6 +94,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
                 return Err(Box::new(e));
             }
         }
+        print!("{}",String::from_utf8_lossy(&response_buff));
         thread::sleep(delta);
     }
 
@@ -103,25 +120,33 @@ fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn load_firmware(dev: &str) -> Result<Output, Box<dyn Error>> {
+fn m4_firmware(dev: &str, option: FimwareOption) -> Result<Output, Box<dyn Error>> {
     let path = format!("/home/root/M4_Firmware/{}-Firmware/",dev);
     let script_path = Path::new(&path);
     let script = format!("./fw_cortex_m4.sh").to_owned();
 
     let output = Command::new(script)
         .current_dir(script_path)
-        .arg("start")
+        .arg(option.arg())
         .output()?;
 
-    loop {
-        match fs::metadata(VIRT_DEVICE) {
-            Ok(_) => break,
-            Err(_) => {thread::sleep(Duration::from_millis(1))},
+    match option {
+        FimwareOption::START => {
+            loop {
+                match fs::metadata(VIRT_DEVICE) {
+                    Ok(_) => break,
+                    Err(_) => {thread::sleep(Duration::from_millis(1))},
+                }
+            }
+        }
+        FimwareOption::STOP =>{
+            return Ok(output);
         }
     }
-
     Ok(output)
 }
+
+
 
 // handle POST req
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
@@ -139,7 +164,8 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     }
 
     println!("---------------------------------------------------");
-    let output = load_firmware(new_data.abbrv_device());
+
+    let output = m4_firmware(new_data.abbrv_device(),FimwareOption::START);
 
     match output {
         Ok(result) => {
@@ -216,7 +242,20 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     //warp::reply::json(&serde_json::json!(result));
     */
     
-    warp::reply::json(&serde_json::json!({"status": 0}))
+    /* deloading m4 firmware for now */
+    match m4_firmware(new_data.abbrv_device(),FimwareOption::STOP) {
+        Ok(output) => {
+            println!("Firmware for {} has been deloaded: {}"
+                ,new_data.abbrv_device(), String::from_utf8_lossy(&output.stdout))
+        },
+        Err(e) => {
+            println!("Error deloading firmware! {}",e);
+            println!("Stopping Server...");
+            std::process::exit(-1)
+        }
+    }
+    warp::reply::json(&serde_json::json!({"status": "Testing has started"}))
+
 }
 
 #[tokio::main]
