@@ -150,12 +150,12 @@ fn m4_firmware(dev: &str, option: FimwareOption) -> Result<Output, Box<dyn Error
 fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
     println!("Test Info:\n\tDevice: {}", new_data.device);
     let mut msg_check : &str = "no";
-    match new_data.device.as_str() {
+    match new_data.abbrv_device() {
         "BST" => {
             println!("\tString Potentiometer Enabled: {}",new_data.check);
             match new_data.check {
-                true => msg_check = "yes",
-                false => msg_check = "no",
+                true => msg_check = "yes\0",
+                false => msg_check = "no\0",
             }
         },
         _ => println!("\tCheck: {}",new_data.check),
@@ -178,7 +178,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     };
 
     println!("---------------------------------------------------");
-    let msg = "hello";
+    let msg = "hello\0";
     thread::sleep(Duration::from_millis(500));
     match rpmsg_write(msg) {
         Ok(_) => {
