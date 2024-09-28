@@ -73,19 +73,18 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
 
     println!("Attempting to read from device...");
+    thread::sleep(Duration::from_millis(500));
     let start_time = Instant::now();
     while  start_time.elapsed() < timeout{
         match dev_rpmsg.read_to_end(&mut response_buff) {
             Ok(0) => { 
-                if response_buff.is_empty(){
-                }
+                if response_buff.is_empty(){ }
                 else { break }
             },
             Ok(_) => { break },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 /* ignore this error maybe if it gets here */
-                if response_buff.is_empty() {
-                }
+                if response_buff.is_empty() { }
                 else { break }
             },
             Err(e) => {
@@ -180,6 +179,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
     println!("---------------------------------------------------");
     let msg = "hello";
+    thread::sleep(Duration::from_millis(500));
     match rpmsg_write(msg) {
         Ok(_) => {
             println!("Message < {} > written successfully!", msg);
