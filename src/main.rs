@@ -154,8 +154,8 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         "BST" => {
             println!("\tString Potentiometer Enabled: {}",new_data.check);
             match new_data.check {
-                true => msg_check = "yes\0",
-                false => msg_check = "no\0",
+                true => msg_check = "yes\n",
+                false => msg_check = "no\n",
             }
         },
         _ => println!("\tCheck: {}",new_data.check),
@@ -178,7 +178,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     };
 
     println!("---------------------------------------------------");
-    let msg = "hello\0";
+    let msg = "hello\n";
     match rpmsg_write(msg) {
         Ok(_) => {
             println!("Message < {} > written successfully!", msg);
