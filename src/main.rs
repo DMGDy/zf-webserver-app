@@ -65,7 +65,7 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let mut dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(false)
-        .custom_flags(libc::O_NOCTTY)
+        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
     let timeout = Duration::from_secs(1);
@@ -77,15 +77,12 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     while  start_time.elapsed() < timeout{
         match dev_rpmsg.read(&mut response_buff) {
             Ok(0) => { 
-                if response_buff.is_empty(){ 
-                }
-                else { break }
+                if !response_buff.is_empty(){ break }
             },
             Ok(_) => { break },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                 /* ignore this rust stdio line bufferingerror maybe if it gets here */
-                if response_buff.is_empty() { }
-                else { break }
+                if !response_buff.is_empty() { break }
             },
             Err(e) => {
                 println!("Error reading device file!: {}",e);
