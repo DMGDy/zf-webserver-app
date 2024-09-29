@@ -59,6 +59,7 @@ impl FimwareOption {
     }
 }
 
+/*
 fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let mut response_buff :Vec<u8> = Vec::new();
 
@@ -95,24 +96,54 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
 
     Ok(String::from_utf8(response_buff)?)
 }
+*/
 
-fn rpmsg_write(msg: &str) -> Result<(), Box<dyn Error>> {
+fn rpmsg_write(msg: &str) -> Result<String, Box<dyn Error>> {
 
     let mut dev_rpmsg = OpenOptions::new()
-        .read(false)
+        .read(true)
         .write(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
+    let mut response_buff = Vec::new();
+
+    let timeout = Duration::from_secs(1);
+    let delta = Duration::from_millis(50);
+
+
     match dev_rpmsg.write(msg.as_bytes()) {
         Ok(_) => {
-            return Ok(())
+            println!("Attempting to read from device...");
+            let start_time = Instant::now();
+            while  start_time.elapsed() < timeout{
+                match dev_rpmsg.read_to_end(&mut response_buff) {
+                    Ok(0) => { 
+                        if !response_buff.is_empty(){ break }
+                    },
+                    Ok(_) => { break },
+                    Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                        /* ignore this rust stdio line bufferingerror maybe if it gets here */
+                        if !response_buff.is_empty() { break }
+                    },
+                    Err(e) => {
+                        println!("Error reading device file!: {}",e);
+                        return Err(Box::new(e));
+                    }
+                }
+                print!("{}",String::from_utf8_lossy(&response_buff));
+                thread::sleep(delta);
+            }
         },
         Err(e)=> {
             println!("Error Writing to device file: {}!",e);
             return Err(Box::new(e))
         },
     }
+
+
+    Ok(String::from_utf8(response_buff)?)
+
 }
 
 fn m4_firmware(dev: &str, option: FimwareOption) -> Result<Output, Box<dyn Error>> {
@@ -177,8 +208,9 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     println!("---------------------------------------------------");
     let msg = "hello\n";
     match rpmsg_write(msg) {
-        Ok(_) => {
-            println!("Message < {} > written successfully!", msg);
+        Ok(response) => {
+            println!("Message:\t{}written successfully!", msg);
+            println!("Response was: \n\t{}",response);
         },
         Err(e) => {
             println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
@@ -186,20 +218,11 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         },
     }
 
-
-     match rpmsg_read() {
-        Ok(response) => {
-            println!("Received response from device file:\n{}",response);
-        },
-        Err(e) => {
-            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e);
-            std::process::exit(-1)
-        }
-    }
     println!("---------------------------------------------------");
     match rpmsg_write(msg_check) {
-        Ok(_) => {
+        Ok(response) => {
             println!("Message < {} > written successfully!", msg_check);
+            println!("Response was: \n\t{}",response)
         },
         Err(e) => {
             println!("Failed to open or write< {} > device file!: {}",VIRT_DEVICE,e);
@@ -207,15 +230,6 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
         },
     }
 
-     match rpmsg_read() {
-        Ok(response) => {
-            println!("Received response from device file:\n{}",response);
-        },
-        Err(e) => {
-            println!("Failed to open or read < {} > device file!: {}", VIRT_DEVICE,e);
-            std::process::exit(-1)
-        }
-    }
     println!("---------------------------------------------------");
 
 
