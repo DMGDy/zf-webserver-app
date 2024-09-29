@@ -65,25 +65,25 @@ fn rpmsg_read() -> Result<String, Box<dyn Error>> {
     let mut dev_rpmsg = OpenOptions::new()
         .read(true)
         .write(false)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
+        .custom_flags(libc::O_NOCTTY)
         .open(VIRT_DEVICE)?;
 
     let timeout = Duration::from_secs(1);
-    let delta = Duration::from_millis(1);
+    let delta = Duration::from_millis(50);
 
 
     println!("Attempting to read from device...");
-    thread::sleep(Duration::from_millis(500));
     let start_time = Instant::now();
     while  start_time.elapsed() < timeout{
-        match dev_rpmsg.read_to_end(&mut response_buff) {
+        match dev_rpmsg.read(&mut response_buff) {
             Ok(0) => { 
-                if response_buff.is_empty(){ }
+                if response_buff.is_empty(){ 
+                }
                 else { break }
             },
             Ok(_) => { break },
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                /* ignore this error maybe if it gets here */
+                /* ignore this rust stdio line bufferingerror maybe if it gets here */
                 if response_buff.is_empty() { }
                 else { break }
             },
@@ -179,7 +179,6 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
     println!("---------------------------------------------------");
     let msg = "hello\0";
-    thread::sleep(Duration::from_millis(500));
     match rpmsg_write(msg) {
         Ok(_) => {
             println!("Message < {} > written successfully!", msg);
@@ -206,7 +205,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             println!("Message < {} > written successfully!", msg_check);
         },
         Err(e) => {
-            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
+            println!("Failed to open or write< {} > device file!: {}",VIRT_DEVICE,e);
             std::process::exit(-1)
         },
     }
@@ -216,7 +215,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
             println!("Received response from device file:\n{}",response);
         },
         Err(e) => {
-            println!("Failed to open < {} > device file!: {}", VIRT_DEVICE,e);
+            println!("Failed to open or read < {} > device file!: {}", VIRT_DEVICE,e);
             std::process::exit(-1)
         }
     }
