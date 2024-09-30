@@ -11,6 +11,7 @@ use std::io::{Write,Read};
 use std::os::unix::fs::OpenOptionsExt;
 use std::str;
 use std::{thread, time::{Instant,Duration}};
+use colored::*;
 use libc;
 use tokio::sync::Mutex;
 
@@ -27,16 +28,16 @@ struct TestData {
     float_data: f64,
 }
 
-#[derive(Deserialize,Serialize)]
-struct TestResult {
-    pass: bool,
+#[derive(Serialize)]
+struct Response{
+    code: i32,
+    status: String,
 }
 
 enum FimwareOption {
     START,
     STOP,
 }
-
 
 impl TestData {
     pub fn abbrv_device(&self) -> &str {
@@ -58,45 +59,6 @@ impl FimwareOption {
         }
     }
 }
-
-/*
-fn rpmsg_read() -> Result<String, Box<dyn Error>> {
-    let mut response_buff :Vec<u8> = Vec::new();
-
-    let mut dev_rpmsg = OpenOptions::new()
-        .read(true)
-        .write(false)
-        .custom_flags(libc::O_NONBLOCK | libc::O_NOCTTY)
-        .open(VIRT_DEVICE)?;
-
-    let timeout = Duration::from_secs(1);
-    let delta = Duration::from_millis(50);
-
-
-    println!("Attempting to read from device...");
-    let start_time = Instant::now();
-    while  start_time.elapsed() < timeout{
-        match dev_rpmsg.read(&mut response_buff) {
-            Ok(0) => { 
-                if !response_buff.is_empty(){ break }
-            },
-            Ok(_) => { break },
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
-                /* ignore this rust stdio line bufferingerror maybe if it gets here */
-                if !response_buff.is_empty() { break }
-            },
-            Err(e) => {
-                println!("Error reading device file!: {}",e);
-                return Err(Box::new(e));
-            }
-        }
-        print!("{}",String::from_utf8_lossy(&response_buff));
-        thread::sleep(delta);
-    }
-
-    Ok(String::from_utf8(response_buff)?)
-}
-*/
 
 fn rpmsg_write(msg: &str) -> Result<String, Box<dyn Error>> {
 
@@ -131,7 +93,7 @@ fn rpmsg_write(msg: &str) -> Result<String, Box<dyn Error>> {
                         return Err(Box::new(e));
                     }
                 }
-                print!("{}",String::from_utf8_lossy(&response_buff));
+               // print!("{}",String::from_utf8_lossy(&response_buff));
                 thread::sleep(delta);
             }
         },
@@ -140,8 +102,6 @@ fn rpmsg_write(msg: &str) -> Result<String, Box<dyn Error>> {
             return Err(Box::new(e))
         },
     }
-
-
     Ok(String::from_utf8(response_buff)?)
 
 }
@@ -172,35 +132,41 @@ fn m4_firmware(dev: &str, option: FimwareOption) -> Result<Output, Box<dyn Error
     Ok(output)
 }
 
+/**
+ * begin_test - starts new device test
+ * 
+ * @params json from HTTP POST request as TestData struct
+ */
 
+fn begin_test(test_data: &TestData) -> Response {
+    println!("{}\n{{\n\t{}: {}",
+        "Test Info".bold(),"Device".underline(),test_data.device.bold());
+    let mut msg_bool = "no\n";
 
-// handle POST req
-fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
-    println!("Test Info:\n\tDevice: {}", new_data.device);
-    let mut msg_check : &str = "no";
-    match new_data.abbrv_device() {
+    match test_data.abbrv_device() {
         "BST" => {
-            println!("\tString Potentiometer Enabled: {}",new_data.check);
-            match new_data.check {
-                true => msg_check = "yes\n",
-                false => msg_check = "no\n",
+            println!("\t{}: {}\n}}",
+                "String Potentiometer Enabled".underline()
+                ,test_data.check.to_string().bold());
+            match test_data.check {
+                true => msg_bool = "yes\n",
+                false => msg_bool= "no\n",
             }
         },
-        _ => println!("\tCheck: {}",new_data.check),
-    }
-
-    println!("---------------------------------------------------");
-
-    let output = m4_firmware(new_data.abbrv_device(),FimwareOption::START);
+        _ => println!("\tCheck: {}",test_data.check),
+    };
+    let output = m4_firmware(test_data.abbrv_device(),FimwareOption::START);
 
     match output {
         Ok(result) => {
             print!("{}",String::from_utf8_lossy(&result.stdout));
-            println!("Firmware loaded successfully!");
+            println!("{}","Firmware loaded successfully!".green());
         },
         Err(e) => {
-            println!("Error loading firmware!: {}",e);
-            println!("Server closing...");
+            println!("{} {}{}: {}",
+                "Error loading firmware for device".red().bold(),
+                test_data.abbrv_device(),"!".red().bold(),e);
+            println!("{}","Stopping the Server...".italic().red());
             std::process::exit(-1)
         }
     };
@@ -209,31 +175,51 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     let msg = "hello\n";
     match rpmsg_write(msg) {
         Ok(response) => {
-            println!("Message:\t{}written successfully!", msg);
-            println!("Response was: \n\t{}",response);
+            println!("{}\n{{\n\t{}}}\n{}"
+                ,"Message".green() ,msg,"written successfully!".green());
+            println!("{}\n{{\n\n\t{}}}\n"
+                ,"Response was:".cyan(),response);
         },
         Err(e) => {
-            println!("Failed to open < {} > device file!: {}",VIRT_DEVICE,e);
+            println!("{} {} {}: {}"
+                ,"Failed to open".red(),VIRT_DEVICE
+                ,"device file!".red().bold(),e);
+            println!("{}","Stopping the Server...".italic().red());
             std::process::exit(-1)
         },
     }
 
     println!("---------------------------------------------------");
-    match rpmsg_write(msg_check) {
+    match rpmsg_write(msg_bool) {
         Ok(response) => {
-            println!("Message < {} > written successfully!", msg_check);
-            println!("Response was: \n\t{}",response)
+            println!("{}\n{{\n\t {} }}\n{}"
+                ,"Message".green() ,msg_bool,"written successfully!".green());
+
+            println!("{}\n{{\n\n\t{}}}\n"
+                ,"Response was:".cyan(),response);
         },
         Err(e) => {
-            println!("Failed to open or write< {} > device file!: {}",VIRT_DEVICE,e);
+            println!("{} {} {}: {}"
+                ,"Failed to open".red(),VIRT_DEVICE
+                ,"device file!".red().bold(),e);
+            println!("{}","Stopping the Server...".italic().red());
             std::process::exit(-1)
         },
     }
 
     println!("---------------------------------------------------");
 
+    Response {
+        code: 0,
+        status: "Microcontroller awake and test has begun".to_owned()
+   }
 
+}
 
+// handle POST req
+fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> impl warp::Reply {
+    let response = begin_test(&new_data);
+   
     let new_data_clone = new_data.clone();
     
     // Spawn a new task to process the data asynchronously
@@ -252,18 +238,19 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
     */
     
     /* deloading m4 firmware for now */
-    match m4_firmware(new_data.abbrv_device(),FimwareOption::STOP) {
-        Ok(output) => {
-            println!("Firmware for {} has been deloaded: {}"
-                ,new_data.abbrv_device(), String::from_utf8_lossy(&output.stdout))
-        },
-        Err(e) => {
-            println!("Error deloading firmware! {}",e);
-            println!("Stopping Server...");
-            std::process::exit(-1)
-        }
-    }
-    warp::reply::json(&serde_json::json!({"status": "Testing has started"}))
+   match m4_firmware(new_data.abbrv_device(),FimwareOption::STOP) {
+       Ok(output) => {
+           println!("Firmware for {} has been deloaded: {}"
+               ,new_data.abbrv_device(), String::from_utf8_lossy(&output.stdout));
+           println!("---------------------------------------------------")
+       },
+       Err(e) => {
+           println!("{}: {}","Error deloading firmware!".red().bold(),e);
+           println!("{}","Stopping the Server...".italic().red());
+           std::process::exit(-1)
+       }
+   }
+   warp::reply::json(&response)
 
 }
 
@@ -294,9 +281,12 @@ async fn main() {
         .or(options_route)
         .with(cors);
 
-    println!("------Rust Server for Web Assembly Application-----");
+    println!("------{}-----",
+        "Rust Server for Web Assembly Application".bold().underline());
+
     println!("---------------------------------------------------");
-    println!("Server Listening http://172.20.10.7:8080\n");
+    println!("{}","Server Listening http://172.20.10.7:8080...".italic());
+    println!("---------------------------------------------------");
     warp::serve(routes)
         .run(([172,20,10,7], 8080))
         .await;
