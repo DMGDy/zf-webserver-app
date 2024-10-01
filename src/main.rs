@@ -42,6 +42,18 @@ enum FimwareOption {
     STOP,
 }
 
+impl State {
+    fn code(&self) -> i32 {
+        match self {
+            Self::Idle=>0,
+            Self::Awake=>1,
+            Self::InProgress=>2,
+            Self::Done=>3,
+            Self::Error=>4,
+        }
+    }
+}
+
 impl TestData {
     pub fn abbrv_device(&self) -> &str {
         match self.device.as_str() {
@@ -246,7 +258,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
            std::process::exit(-1)
        }
    }
-   warp::reply::json(&response)
+   warp::reply::json(&(response.code()))
 
 
 }
