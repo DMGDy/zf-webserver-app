@@ -29,9 +29,12 @@ struct TestData {
 }
 
 #[derive(Serialize)]
-struct Response{
-    code: i32,
-    status: String,
+enum State{
+    Awake,
+    InProgress,
+    Done,
+    Error,
+    Idle,
 }
 
 enum FimwareOption {
@@ -138,7 +141,7 @@ fn m4_firmware(dev: &str, option: FimwareOption) -> Result<Output, Box<dyn Error
  * @params json from HTTP POST request as TestData struct
  */
 
-fn begin_test(test_data: &TestData) -> Response {
+fn begin_test(test_data: &TestData) -> State{
     println!("{}\n{{\n\t{}: {}",
         "Test Info".bold(),"Device".underline(),test_data.device.bold());
     let mut msg_bool = "no\n";
@@ -166,8 +169,7 @@ fn begin_test(test_data: &TestData) -> Response {
             println!("{} {}{}: {}",
                 "Error loading firmware for device".red().bold(),
                 test_data.abbrv_device(),"!".red().bold(),e);
-            println!("{}","Stopping the Server...".italic().red());
-            std::process::exit(-1)
+            return State::Error;
         }
     };
 
@@ -184,15 +186,14 @@ fn begin_test(test_data: &TestData) -> Response {
             println!("{} {} {}: {}"
                 ,"Failed to open".red(),VIRT_DEVICE
                 ,"device file!".red().bold(),e);
-            println!("{}","Stopping the Server...".italic().red());
-            std::process::exit(-1)
+            return State::Error
         },
     }
 
     println!("---------------------------------------------------");
     match rpmsg_write(msg_bool) {
         Ok(response) => {
-            println!("{}\n{{\n\t {} }}\n{}"
+            println!("{}\n{{\n\t{}}}\n{}"
                 ,"Message".green() ,msg_bool,"written successfully!".green());
 
             println!("{}\n{{\n\n\t{}}}\n"
@@ -202,18 +203,13 @@ fn begin_test(test_data: &TestData) -> Response {
             println!("{} {} {}: {}"
                 ,"Failed to open".red(),VIRT_DEVICE
                 ,"device file!".red().bold(),e);
-            println!("{}","Stopping the Server...".italic().red());
-            std::process::exit(-1)
+            return State::Error
         },
     }
 
     println!("---------------------------------------------------");
 
-    Response {
-        code: 0,
-        status: "Microcontroller awake and test has begun".to_owned()
-   }
-
+    State::Awake
 }
 
 // handle POST req
@@ -251,6 +247,7 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
        }
    }
    warp::reply::json(&response)
+
 
 }
 
