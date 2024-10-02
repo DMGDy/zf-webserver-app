@@ -75,7 +75,7 @@ impl FimwareOption {
     }
 }
 
-fn rpmsg_write(msg: &str) -> Result<String, Box<dyn Error>> {
+fn rpmsg_comm(msg: &str) -> Result<String, Box<dyn Error>> {
 
     let mut dev_rpmsg = OpenOptions::new()
         .read(true)
@@ -187,7 +187,7 @@ fn begin_test(test_data: &TestData) -> State{
 
     println!("---------------------------------------------------");
     let msg = "hello\n";
-    match rpmsg_write(msg) {
+    match rpmsg_comm(msg) {
         Ok(response) => {
             println!("{}\n{{\n\t{}}}\n{}"
                 ,"Message".green() ,msg,"written successfully!".green());
@@ -203,7 +203,7 @@ fn begin_test(test_data: &TestData) -> State{
     }
 
     println!("---------------------------------------------------");
-    match rpmsg_write(msg_bool) {
+    match rpmsg_comm(msg_bool) {
         Ok(response) => {
             println!("{}\n{{\n\t{}}}\n{}"
                 ,"Message".green() ,msg_bool,"written successfully!".green());
@@ -263,6 +263,10 @@ fn handle_post(new_data: TestData, data_store: Arc<Mutex<Vec<TestData>>>) -> imp
 
 }
 
+/* main function: configures server with warp filters for incoming
+ *  requests.
+ *
+ */
 #[tokio::main]
 async fn main() {
     let data_store = Arc::new(Mutex::new(Vec::new()));
