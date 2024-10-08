@@ -194,9 +194,9 @@ pub fn begin_test(test_data: &TestData) -> State{
     let msg = "hello\n";
     match rpmsg_comm(msg) {
         Ok(response) => {
-            println!("{}\n{{\n\t{}}}\n{}"
+            println!("{}\n\t{}{}"
                 ,"Message".green() ,msg,"written successfully!".green());
-            println!("{}\n{{\n\n\t{}}}\n"
+            println!("{}\n\t{}"
                 ,"Response was:".cyan(),response);
         },
         Err(e) => {
@@ -211,10 +211,10 @@ pub fn begin_test(test_data: &TestData) -> State{
 
     match rpmsg_comm(msg_bool) {
         Ok(response) => {
-            println!("{}\n{{\n\t{}}}\n{}"
+            println!("{}\n\t{}{}"
                 ,"Message".green() ,msg_bool,"written successfully!".green());
 
-            println!("{}\n{{\n\n\t{}}}\n"
+            println!("{}\n\t{}"
                 ,"Response was:".cyan(),response);
         },
         Err(e) => {
@@ -224,8 +224,8 @@ pub fn begin_test(test_data: &TestData) -> State{
             return State::EOpen
         },
     }
-
     println!("---------------------------------------------------");
+    // Test has started by this point
 
     State::Awake
 }
