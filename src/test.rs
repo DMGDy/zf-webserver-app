@@ -20,11 +20,7 @@ pub const VIRT_DEVICE: &str = "/dev/ttyRPMSG0";
 pub struct TestData {
     device: String,
     check: bool,
-    int_data: i32,
-    float_data: f64,
 }
-
-
 
 pub enum FimwareOption {
     START,
@@ -141,8 +137,7 @@ fn rpmsg_comm(msg: &str) -> Result<String, Box<dyn Error>> {
                     },
                     Err(e) => {
                         println!("Error reading device file!: {}",e);
-                        return Err(Box::new(e));
-                    }
+                        return Err(Box::new(e)); }
                 }
                // print!("{}",String::from_utf8_lossy(&response_buff));
                 thread::sleep(delta);
