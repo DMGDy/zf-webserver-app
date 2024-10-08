@@ -6,19 +6,11 @@ use colored::*;
 use tokio::sync::Mutex;
 
 
-// handle POST req
-fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestData>>>) -> impl warp::Reply {
+
+// handle POST req, first request received when "Start Test" is clicked
+fn handle_post(new_data: test::TestData) -> impl warp::Reply {
     let response = test::begin_test(&new_data);
    
-    let new_data_clone = new_data.clone();
-    
-    // Spawn a new task to process the data asynchronously
-    tokio::spawn(async move {
-        let mut store = data_store.lock().await;
-        store.push(new_data_clone);
-        println!("Updated data store. Current count: {}", store.len());
-    });
-
     /* TODO: implement on server to comprehend a struct as response
     let result = TestResult {
         pass: true
@@ -51,20 +43,15 @@ fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestDat
  */
 #[tokio::main]
 async fn main() {
-    let data_store = Arc::new(Mutex::new(Vec::new()));
 
     // configure CORs
     let cors = warp::cors()
         .allow_any_origin()
         .allow_headers(vec!["Content-Type"])
-        .allow_methods(vec!["POST", "OPTIONS"]);
-
-    let data_store_filter = warp::any()
-        .map(move || data_store.clone());
+        .allow_methods(vec!["POST", "OPTIONS", "GET"]);
 
     let dev_selecet_route = warp::post()
         .and(warp::body::json())
-        .and(data_store_filter)
         .map(handle_post);
     
     
