@@ -1,9 +1,7 @@
 mod test;
 
 use warp::Filter;
-use std::sync::Arc;
 use colored::*;
-use tokio::sync::Mutex;
 
 
 
@@ -63,11 +61,11 @@ async fn main() {
         .or(options_route)
         .with(cors);
 
-    println!("------{}-----",
+    println!("-----{}-----",
         "Rust Server for Web Assembly Application".bold().underline());
 
     println!("---------------------------------------------------");
-    println!("{}","Server Listening http://172.20.10.7:8080...".italic());
+    println!("{}","Server Listening http://172.20.10.7:8080...".italic().bold());
     println!("---------------------------------------------------");
     warp::serve(routes)
         .run(([172,20,10,7], 8080))
