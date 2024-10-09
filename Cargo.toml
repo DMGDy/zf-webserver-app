@@ -1,6 +1,6 @@
 [package]
 name = "zf-server"
-version = "0.5.0"
+version = "0.9.0"
 authors = [ "Dylan-Matthew Garza <dylanmatthew.garza@gmail.com" ]
 repository = "git@github.com:DMGDy/zf-webserver-app.git"
 edition = "2021"
