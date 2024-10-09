@@ -28,21 +28,21 @@ pub enum FimwareOption {
 }
 
 #[derive(Serialize)]
-pub enum State{
+pub enum State {
     Awake,
     InProgress,
     Done,
-    Idle,
     ENoFirmware,
     ENoRead,
     ENoWrite,
     EOpen,
 }
 
+
+
 impl State {
     pub fn code(&self) -> i32 {
         match self {
-            Self::Idle=>0,
             Self::Awake=>1,
             Self::InProgress=>2,
             Self::Done=>3,
@@ -227,5 +227,5 @@ pub fn begin_test(test_data: &TestData) -> State{
     println!("---------------------------------------------------");
     // Test has started by this point
 
-    State::Awake
+    State::InProgress
 }
