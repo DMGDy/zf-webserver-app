@@ -6,9 +6,9 @@ repository = "git@github.com:DMGDy/zf-webserver-app.git"
 edition = "2021"
 
 [dependencies]
-tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 warp = "0.3.7"
 libc = "0.2.159"
 colored = "2.1.0"
+tokio = { version = "1.40.0", features = ["full"] }
