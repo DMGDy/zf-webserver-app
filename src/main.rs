@@ -3,6 +3,10 @@ mod test;
 use warp::Filter;
 use colored::*;
 
+fn handle_get() -> impl warp::Reply {
+
+    warp::reply::json(&serde_json::json!({"status":"0"}))
+}
 
 
 // handle POST req, first request received when "Start Test" is clicked
@@ -53,12 +57,16 @@ async fn main() {
         .map(handle_post);
     
     
+    let test_route = warp::get()
+        .map(handle_get);
+
     let options_route = warp::options()
         .map(|| warp::reply());
 
     // routes
-    let routes = dev_selecet_route
-        .or(options_route)
+    let routes = options_route
+        .or(dev_selecet_route)
+        .or(test_route)
         .with(cors);
 
     println!("-----{}-----",
@@ -69,5 +77,5 @@ async fn main() {
     println!("---------------------------------------------------");
     warp::serve(routes)
         .run(([172,20,10,7], 8080))
-        .await;
+        .await
 }
