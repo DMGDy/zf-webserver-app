@@ -1,7 +1,8 @@
-mod test;
-
 use warp::Filter;
 use colored::*;
+
+use crate::test::State;
+mod test;
 
 fn handle_get() -> impl warp::Reply {
 
@@ -35,13 +36,11 @@ fn handle_post(new_data: test::TestData) -> impl warp::Reply {
        }
    }
    warp::reply::json(&(response.code()))
-
-
 }
+
 
 /* main function: configures server with warp filters for incoming
  *  requests.
- *
  */
 #[tokio::main]
 async fn main() {
@@ -51,6 +50,10 @@ async fn main() {
         .allow_any_origin()
         .allow_headers(vec!["Content-Type"])
         .allow_methods(vec!["POST", "OPTIONS", "GET"]);
+
+    let is_up_route = warp::get()
+        .and(warp::path("up"))
+        .map(|| warp::reply::json(&State::Awake));
 
     let dev_selecet_route = warp::post()
         .and(warp::body::json())
@@ -65,6 +68,7 @@ async fn main() {
 
     // routes
     let routes = options_route
+        .or(is_up_route)
         .or(dev_selecet_route)
         .or(test_route)
         .with(cors);
