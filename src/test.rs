@@ -29,7 +29,7 @@ pub enum FimwareOption {
 
 #[derive(Serialize)]
 pub enum State {
-    Awake,
+    Online,
     InProgress,
     Done,
     ENoFirmware,
@@ -43,7 +43,7 @@ pub enum State {
 impl State {
     pub fn code(&self) -> i32 {
         match self {
-            Self::Awake=>1,
+            Self::Online=>1,
             Self::InProgress=>2,
             Self::Done=>3,
             Self::ENoFirmware=>-1,
@@ -54,7 +54,6 @@ impl State {
     }
 }
 
-
 impl FimwareOption {
     fn arg(&self) -> &str {
         match self {
@@ -64,8 +63,7 @@ impl FimwareOption {
     }
 }
 
-impl TestData {
-    pub fn abbrv_device(&self) -> &str {
+impl TestData { pub fn abbrv_device(&self) -> &str {
         match self.device.as_str() {
             "Brake Signal Transmitter" => "BST",
             "Continuous Wear Sensor" => "CWS",
