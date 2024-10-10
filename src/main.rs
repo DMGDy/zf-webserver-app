@@ -4,7 +4,7 @@ use colored::*;
 use crate::test::State;
 mod test;
 
-fn handle_get() -> impl warp::Reply {
+fn handle_get_results() -> impl warp::Reply {
 
     warp::reply::json(&serde_json::json!({"status":"0"}))
 }
@@ -23,6 +23,7 @@ fn handle_post(new_data: test::TestData) -> impl warp::Reply {
     */
     
     /* deloading m4 firmware for now */
+    /*
    match test::m4_firmware(new_data.abbrv_device(),test::FimwareOption::STOP) {
        Ok(output) => {
            println!("Firmware for {} has been deloaded: {}"
@@ -35,6 +36,8 @@ fn handle_post(new_data: test::TestData) -> impl warp::Reply {
            std::process::exit(-1)
        }
    }
+   */
+
    // using code() method to ensure enum value aligns with web applications
    warp::reply::json(&(response.code()))
 }
@@ -62,7 +65,8 @@ async fn main() {
     
     
     let test_route = warp::get()
-        .map(handle_get);
+        .and(warp::path("status"))
+        .map(handle_get_results);
 
     let options_route = warp::options()
         .map(|| warp::reply());
