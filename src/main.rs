@@ -35,6 +35,7 @@ fn handle_post(new_data: test::TestData) -> impl warp::Reply {
            std::process::exit(-1)
        }
    }
+   // using code() method to ensure enum value aligns with web applications
    warp::reply::json(&(response.code()))
 }
 
@@ -53,7 +54,7 @@ async fn main() {
 
     let is_up_route = warp::get()
         .and(warp::path("up"))
-        .map(|| warp::reply::json(&State::Awake));
+        .map(|| warp::reply::json(&State::Online));
 
     let dev_selecet_route = warp::post()
         .and(warp::body::json())
