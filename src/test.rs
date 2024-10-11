@@ -231,9 +231,16 @@ pub fn begin_test(test_data: &TestData) -> State{
 }
 
 pub fn get_results() -> State {
-    
-    match rpmsg_comm("ping\n") {
+    let msg = "ping\n";
+    let status = rpmsg_comm("ping\n");
+    match status {
         Ok(response) => { 
+            println!("{}\n\t{}{}"
+                ,"Message".green() ,msg,"written successfully!".green());
+
+            println!("{}\n\t{}"
+                ,"Response was:".cyan(),response);
+             
             match &response[..] {
                 "Testing...\n" =>{State::InProgress},
                 "Pass\n" =>{ State::Pass },
@@ -241,6 +248,11 @@ pub fn get_results() -> State {
                 &_ => { State::ENoRead },
             }
         }
-        Err(_) => {State::EOpen}
+        Err(e) => {
+            println!("{} {} {}: {}"
+                ,"Failed to open".red(),VIRT_DEVICE
+                ,"device file!".red().bold(),e);
+            State::EOpen
+        }
     }
 }
