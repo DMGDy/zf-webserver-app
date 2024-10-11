@@ -31,7 +31,8 @@ pub enum FimwareOption {
 pub enum State {
     Online,
     InProgress,
-    Done,
+    Pass,
+    Fail,
     ENoFirmware,
     ENoRead,
     ENoWrite,
@@ -45,7 +46,8 @@ impl State {
         match self {
             Self::Online=>1,
             Self::InProgress=>2,
-            Self::Done=>3,
+            Self::Pass=>3,
+            Self::Fail=>4,
             Self::ENoFirmware=>-1,
             Self::ENoRead=>-2,
             Self::ENoWrite=>-3,
@@ -226,4 +228,19 @@ pub fn begin_test(test_data: &TestData) -> State{
     // Test has started by this point
 
     State::InProgress
+}
+
+fn get_results() -> State {
+    
+    match rpmsg_comm("ping\n") {
+        Ok(response) => { 
+            match &response[..] {
+                "Testing...\n" =>{State::InProgress},
+                "Pass\n" =>{ State::Pass },
+                "Fail\n" =>{ State::Fail },
+                &_ => { State::ENoRead },
+            }
+        }
+        Err(_) => {State::EOpen}
+    }
 }
