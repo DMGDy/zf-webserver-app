@@ -1,12 +1,49 @@
 use warp::Filter;
 use colored::*;
+use tokio::sync::Mutex;
+use std::sync::Arc;
 
 use crate::test::State;
 mod test;
 
-fn handle_get_results() -> impl warp::Reply {
 
-    warp::reply::json(&serde_json::json!({"status":"0"}))
+fn handle_get_results(data_store: Arc<Mutex<Vec<test::TestData>>>) 
+-> impl warp::Reply {
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    // get Test Data from previous request
+    // TODO: make this not unsafe and not be lazy with unwraps
+        let dataresult = tokio::spawn(async move {
+            let mut store = data_store.lock().await;
+            store.pop().unwrap()
+        });
+        
+        let data = rt.block_on(dataresult).unwrap();
+
+        
+
+    let mut test_state;
+    loop {
+
+        test_state = test::get_results();
+        if matches!(test_state,State::Pass|State::Fail) {
+            break;
+        }
+    }
+
+   match test::m4_firmware(data.abbrv_device(),test::FimwareOption::STOP) {
+       Ok(output) => {
+           println!("Firmware for {} has been deloaded: {}"
+               ,data.abbrv_device(), String::from_utf8_lossy(&output.stdout));
+           println!("---------------------------------------------------")
+       },
+       Err(e) => {
+           println!("{}: {}","Error deloading firmware!".red().bold(),e);
+           println!("{}","Stopping the Server...".italic().red());
+           std::process::exit(-1)
+       }
+   }
+   
+    warp::reply::json(&(test_state.code()))
 }
 
 // handle POST req
@@ -21,30 +58,6 @@ fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestDat
         store.push(new_data_clone);
         println!("Updated data store. Current count: {}", store.len());
     });
-
-    /* TODO: implement on server to comprehend a struct as response
-    let result = TestResult {
-        pass: true
-    };
-
-    //warp::reply::json(&serde_json::json!(result));
-    */
-    
-    /* deloading m4 firmware for now */
-    /*
-   match test::m4_firmware(new_data.abbrv_device(),test::FimwareOption::STOP) {
-       Ok(output) => {
-           println!("Firmware for {} has been deloaded: {}"
-               ,new_data.abbrv_device(), String::from_utf8_lossy(&output.stdout));
-           println!("---------------------------------------------------")
-       },
-       Err(e) => {
-           println!("{}: {}","Error deloading firmware!".red().bold(),e);
-           println!("{}","Stopping the Server...".italic().red());
-           std::process::exit(-1)
-       }
-   }
-   */
 
    // using code() method to ensure enum value aligns with web applications
    warp::reply::json(&(response.code()))
@@ -62,8 +75,9 @@ async fn main() {
     let cors = warp::cors()
         .allow_any_origin()
         .allow_headers(vec!["Content-Type"])
-        .allow_methods(vec!["POST", "OPTIONS"]);
+        .allow_methods(vec!["GET", "POST", "OPTIONS"]);
 
+    // so so test data can be passed around
     let data_store_filter = warp::any()
         .map(move || data_store.clone());
 
@@ -73,13 +87,14 @@ async fn main() {
 
     let dev_selecet_route = warp::post()
         .and(warp::body::json())
-        .and(data_store_filter)
+        .and(data_store_filter.clone())
         .map(handle_post);
     
     
-    let test_route = warp::get()
-        .and(warp::path("status"))
-        .map(handle_get_results);
+    let result_route = warp::get()
+        .and(warp::path("result"))
+        .and(data_store_filter)
+        .map(handle_get_results.clone());
 
     let options_route = warp::options()
         .map(|| warp::reply());
@@ -88,7 +103,7 @@ async fn main() {
     let routes = options_route
         .or(is_up_route)
         .or(dev_selecet_route)
-        .or(test_route)
+        .or(result_route)
         .with(cors);
 
     println!("-----{}-----",
