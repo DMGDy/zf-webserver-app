@@ -12,12 +12,13 @@ fn handle_get_results(data_store: Arc<Mutex<Vec<test::TestData>>>)
     let rt = tokio::runtime::Runtime::new().unwrap();
     // get Test Data from previous request
     // TODO: make this not unsafe and not be lazy with unwraps
-        let dataresult = tokio::spawn(async move {
-            let mut store = data_store.lock().await;
-            store.pop().unwrap()
-        });
-        
-        let data = rt.block_on(dataresult).unwrap();
+    let dataresult = tokio::spawn(async move {
+
+        let mut store = data_store.lock().await;
+        store.pop().unwrap()
+    });
+    
+    let data = rt.block_on(dataresult).unwrap();
 
         
 
