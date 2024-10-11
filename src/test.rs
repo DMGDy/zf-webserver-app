@@ -230,7 +230,7 @@ pub fn begin_test(test_data: &TestData) -> State{
     State::InProgress
 }
 
-fn get_results() -> State {
+pub fn get_results() -> State {
     
     match rpmsg_comm("ping\n") {
         Ok(response) => { 
