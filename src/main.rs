@@ -97,8 +97,8 @@ async fn main() {
     
     let result_route = warp::get()
         .and(warp::path("result"))
-        .and(data_store_filter)
-        .map(handle_get_results.clone());
+        .and(data_store_filter.clone())
+        .map(handle_get_results);
 
     let options_route = warp::options()
         .map(|| warp::reply());
