@@ -1,7 +1,11 @@
 use warp::Filter;
 use colored::*;
 use tokio::sync::Mutex;
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    thread,
+    time::Duration,
+};
 
 use crate::test::State;
 mod test;
@@ -19,16 +23,15 @@ fn handle_get_results(data_store: Arc<Mutex<Vec<test::TestData>>>)
     });
     
     let data = rt.block_on(dataresult).unwrap();
-
-        
-
     let mut test_state;
-    loop {
 
+    loop {
+        // loop until test is done witha  pass or fail
         test_state = test::get_results();
         if matches!(test_state,State::Pass|State::Fail) {
             break;
         }
+        thread::sleep(Duration::from_millis(500));
     }
 
    match test::m4_firmware(data.abbrv_device(),test::FimwareOption::STOP) {
