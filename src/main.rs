@@ -57,8 +57,9 @@ fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestDat
     let new_data_clone = new_data.clone();
     
     // Spawn a new task to process the data asynchronously
+    let store_copy = data_store.clone();
     tokio::spawn(async move {
-        let mut store = data_store.lock().await;
+        let mut store = store_copy.lock().await;
         store.push(new_data_clone);
         println!("Updated data store. Current count: {}", store.len());
     });
@@ -97,7 +98,7 @@ async fn main() {
     
     let result_route = warp::get()
         .and(warp::path("result"))
-        .and(data_store_filter.clone())
+        .and(data_store_filter)
         .map(handle_get_results);
 
     let options_route = warp::options()
