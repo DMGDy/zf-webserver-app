@@ -1,4 +1,4 @@
-use warp::Filter;
+use warp::{Filter,Rejection,Reply};
 use colored::*;
 use tokio::sync::Mutex;
 use std::{
@@ -10,19 +10,19 @@ use std::{
 use crate::test::State;
 mod test;
 
+type ShatedState<T> = Arc<Mutex<Vec<T>>>;
 
-fn handle_get_results(data_store: Arc<Mutex<Vec<test::TestData>>>) 
--> impl warp::Reply {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+async
+fn handle_get_results(data_store: ShatedState<test::TestData>)
+-> Result<impl Reply,Rejection> {
     // get Test Data from previous request
     // TODO: make this not unsafe and not be lazy with unwraps
-    let dataresult = tokio::spawn(async move {
+    let data= tokio::spawn(async move {
 
-        let mut store = data_store.lock().await;
-        store.pop().unwrap()
-    });
+        let store = data_store.lock().await;
+        store.last().unwrap().clone()
+    }).await.unwrap();
     
-    let data = rt.block_on(dataresult).unwrap();
     let mut test_state;
 
     loop {
@@ -47,11 +47,11 @@ fn handle_get_results(data_store: Arc<Mutex<Vec<test::TestData>>>)
        }
    }
    
-    warp::reply::json(&(test_state.code()))
+    Ok(warp::reply::json(&(test_state.code())))
 }
 
 // handle POST req
-fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestData>>>) -> impl warp::Reply {
+fn handle_post(new_data: test::TestData, data_store: ShatedState<test::TestData>) -> impl warp::Reply {
     let response = test::begin_test(&new_data);
    
     let new_data_clone = new_data.clone();
@@ -74,7 +74,7 @@ fn handle_post(new_data: test::TestData, data_store: Arc<Mutex<Vec<test::TestDat
  */
 #[tokio::main]
 async fn main() {
-    let data_store = Arc::new(Mutex::new(Vec::new()));
+    let data_store: ShatedState<test::TestData> = Arc::new(Mutex::new(Vec::new()));
 
     // configure CORs
     let cors = warp::cors()
@@ -99,7 +99,7 @@ async fn main() {
     let result_route = warp::get()
         .and(warp::path("result"))
         .and(data_store_filter)
-        .map(handle_get_results);
+        .and_then(handle_get_results);
 
     let options_route = warp::options()
         .map(|| warp::reply());
