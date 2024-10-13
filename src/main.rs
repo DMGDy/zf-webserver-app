@@ -23,12 +23,12 @@ fn handle_get_results(data_store: ShatedState<test::TestData>)
         store.last().unwrap().clone()
     }).await.unwrap();
     
-    let mut test_state;
+    let mut test_result;
 
     loop {
         // loop until test is done witha  pass or fail
-        test_state = test::get_results();
-        if matches!(test_state,State::Pass|State::Fail) {
+        test_result = test::get_results();
+        if matches!(test_result,State::Pass|State::Fail) {
             break;
         }
         thread::sleep(Duration::from_millis(500));
@@ -47,7 +47,7 @@ fn handle_get_results(data_store: ShatedState<test::TestData>)
        }
    }
    
-    Ok(warp::reply::json(&(test_state.code())))
+    Ok(warp::reply::json(&test_result))
 }
 
 // handle POST req
@@ -65,7 +65,7 @@ fn handle_post(new_data: test::TestData, data_store: ShatedState<test::TestData>
     });
 
    // using code() method to ensure enum value aligns with web applications
-   warp::reply::json(&(response.code()))
+   warp::reply::json(&response)
 }
 
 
