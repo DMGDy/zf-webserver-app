@@ -39,23 +39,6 @@ pub enum State {
     EOpen,
 }
 
-
-
-impl State {
-    pub fn code(&self) -> i32 {
-        match self {
-            Self::Online=>1,
-            Self::InProgress=>2,
-            Self::Pass=>3,
-            Self::Fail=>4,
-            Self::ENoFirmware=>-1,
-            Self::ENoRead=>-2,
-            Self::ENoWrite=>-3,
-            Self::EOpen=>-4,
-        }
-    }
-}
-
 impl FimwareOption {
     fn arg(&self) -> &str {
         match self {
