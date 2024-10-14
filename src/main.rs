@@ -34,7 +34,14 @@ fn handle_get_results(data_store: ShatedState<test::TestData>)
         thread::sleep(Duration::from_millis(500));
     }
 
-   match test::m4_firmware(data.abbrv_device(),test::FimwareOption::STOP) {
+    /* read trace from csv before deloading firmware
+    * located at 
+    * `/sys/kernel/debug/remoteproc/remoteproc0/trace0`
+    */
+
+    test::trace_to_csv(data.abbrv_device());
+           
+    match test::m4_firmware(data.abbrv_device(),test::FimwareOption::STOP) {
        Ok(output) => {
            println!("Firmware for {} has been deloaded: {}"
                ,data.abbrv_device(), String::from_utf8_lossy(&output.stdout));
@@ -45,13 +52,14 @@ fn handle_get_results(data_store: ShatedState<test::TestData>)
            println!("{}","Stopping the Server...".italic().red());
            std::process::exit(-1)
        }
-   }
-   
+    }
+
     Ok(warp::reply::json(&test_result))
 }
 
 // handle POST req
-fn handle_post(new_data: test::TestData, data_store: ShatedState<test::TestData>) -> impl warp::Reply {
+fn handle_post(new_data: test::TestData, 
+    data_store: ShatedState<test::TestData>) -> impl warp::Reply {
     let response = test::begin_test(&new_data);
    
     let new_data_clone = new_data.clone();
