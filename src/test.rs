@@ -253,15 +253,14 @@ pub fn trace_to_csv(dev_name: &str) {
         }
     };
 
-    let data_dir = format!("/data/{}",dev_name);
 
     match fs::metadata("data/") {
         Ok(_) => {},
         Err(_) =>  
-            fs::create_dir_all(&data_dir).unwrap()
+            fs::create_dir_all("data/").unwrap()
     };
 
-    let path_str = format!("{data_dir}/{dev_name}-test.csv");
+    let path_str = format!("data/{dev_name}-test.csv");
 
     match fs::write(path_str.clone(),trace_content) {
         Ok(_) => {println!("Successfully created {path_str} of test")}
