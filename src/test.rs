@@ -14,6 +14,8 @@ use serde::{Serialize,Deserialize};
 use colored::*;
 
 pub const VIRT_DEVICE: &str = "/dev/ttyRPMSG0";
+const TRACE_BUFFER: &str = "/sys/kernel/debug/remoteproc/remoteproc0/trace0";
+
 
 // struct expected from first POST request
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -238,4 +240,27 @@ pub fn get_results() -> State {
             State::EOpen
         }
     }
+}
+
+/* Read from logged trace and save to a .csv somewhere else*/
+
+pub fn trace_to_csv(dev_name: &str) {
+    let trace_content = match fs::read_to_string(TRACE_BUFFER) {
+        Ok(content) => content,
+        Err(e) => {
+            println!("Error reading from Kernel debug buffer!: {e}");
+            return
+        }
+    };
+
+    let path_str = format!("{dev_name}-test.csv");
+
+    match fs::write(path_str.clone(),trace_content) {
+        Ok(_) => {println!("Successfully created {path_str} of test")}
+        Err(e) => { 
+            println!("Could not create csv from test data!: {e}");
+            return
+        }
+    };
+
 }
