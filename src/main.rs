@@ -1,6 +1,7 @@
 use warp::{Filter,Rejection,Reply};
 use colored::*;
 use tokio::sync::Mutex;
+use std::path::Path;
 use std::{
     sync::Arc,
     thread,
@@ -59,7 +60,7 @@ fn handle_get_results(data_store: ShatedState<test::TestData>)
 
 // handle POST req
 fn handle_post(new_data: test::TestData, 
-    data_store: ShatedState<test::TestData>) -> impl warp::Reply {
+    data_store: ShatedState<test::TestData>) -> impl Reply {
     let response = test::begin_test(&new_data);
    
     let new_data_clone = new_data.clone();
@@ -94,15 +95,31 @@ async fn main() {
     let data_store_filter = warp::any()
         .map(move || data_store.clone());
 
+    let get_data = warp::get()
+        .and(warp::path::param())
+        .and(warp::path::end())
+        .map(|dev: String| {
+            let csv = format!("{}.csv",dev.clone());
+            let data_path = Path::new("data/");
+            warp::fs::file(data_path.join(csv))
+        })
+        .map(|_| warp::reply())
+        .map(|response| {
+            warp::reply::with_header(
+                response,
+                "Content-Type",
+                "text/csv"
+            )
+        });
+
     let is_up_route = warp::get()
         .and(warp::path("up"))
         .map(|| warp::reply::json(&State::Online));
 
-    let dev_selecet_route = warp::post()
+    let dev_select_route = warp::post()
         .and(warp::body::json())
         .and(data_store_filter.clone())
         .map(handle_post);
-    
     
     let result_route = warp::get()
         .and(warp::path("result"))
@@ -115,8 +132,9 @@ async fn main() {
     // routes
     let routes = options_route
         .or(is_up_route)
-        .or(dev_selecet_route)
+        .or(dev_select_route)
         .or(result_route)
+        .or(get_data)
         .with(cors);
 
     println!("-----{}-----",
