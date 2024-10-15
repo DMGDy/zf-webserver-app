@@ -94,23 +94,6 @@ async fn main() {
     let data_store_filter = warp::any()
         .map(move || data_store.clone());
 
-    /*
-    let get_bst_data = warp::get()
-        .and(warp::fs::file("/data/BST-test.csv"))
-        .with(warp::reply::he)
-    */
-
-    let get_bst_data = warp::get()
-        .and(warp::fs::file("data/BST-test.csv"))
-        .map(|file| {
-            warp::reply::with_header(
-                file,
-                "Content-Type",
-                "text/csv"
-            )
-        });
-        
-
     let is_up_route = warp::get()
         .and(warp::path("up"))
         .map(|| warp::reply::json(&State::Online));
@@ -133,7 +116,6 @@ async fn main() {
         .or(is_up_route)
         .or(dev_select_route)
         .or(result_route)
-        .or(get_bst_data)
         .with(cors);
 
     println!("-----{}-----",
