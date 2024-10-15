@@ -95,8 +95,7 @@ async fn main() {
         .map(move || data_store.clone());
 
     let get_bst_data = warp::get()
-        .and(warp::path::end())
-        .and(warp::fs::file("./data/BST-test.csv"));
+        .and(warp::fs::file("/data/BST-test.csv"));
         
 
     let is_up_route = warp::get()
