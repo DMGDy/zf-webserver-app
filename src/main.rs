@@ -1,7 +1,6 @@
 use warp::{Filter,Rejection,Reply};
 use colored::*;
 use tokio::sync::Mutex;
-use std::path::Path;
 use std::{
     sync::Arc,
     thread,
@@ -95,23 +94,10 @@ async fn main() {
     let data_store_filter = warp::any()
         .map(move || data_store.clone());
 
-    let get_data = warp::get()
-        .and(warp::path::param())
+    let get_bst_data = warp::get()
         .and(warp::path::end())
-        .map(|dev: String| {
-            let csv = format!("{}-test.csv",dev.clone());
-            println!("Serving {csv} for download to client");
-            let data_path = Path::new("data/");
-            warp::fs::file(data_path.join(csv))
-        })
-        .map(|_| warp::reply())
-        .map(|response| {
-            warp::reply::with_header(
-                response,
-                "Content-Type",
-                "text/csv"
-            )
-        });
+        .and(warp::fs::file("./data/BST-test.csv"));
+        
 
     let is_up_route = warp::get()
         .and(warp::path("up"))
@@ -135,7 +121,7 @@ async fn main() {
         .or(is_up_route)
         .or(dev_select_route)
         .or(result_route)
-        .or(get_data)
+        .or(get_bst_data)
         .with(cors);
 
     println!("-----{}-----",
