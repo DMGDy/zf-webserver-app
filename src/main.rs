@@ -99,7 +99,8 @@ async fn main() {
         .and(warp::path::param())
         .and(warp::path::end())
         .map(|dev: String| {
-            let csv = format!("{}.csv",dev.clone());
+            let csv = format!("{}-test.csv",dev.clone());
+            println!("Serving {csv} for download to client");
             let data_path = Path::new("data/");
             warp::fs::file(data_path.join(csv))
         })
